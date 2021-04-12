@@ -37,6 +37,29 @@ colnames(dt2)[1] <- "Age"
 
 dt2 <- na.omit(dt2)
 
+##### Creating Age Buckets for Control ####
+
+#Check the range of ages 
+range(dt$Age) #16-90
+
+#Visualize the Histogram
+hist(dt2$Age,breaks=5) #5 age ranges
+
+#Separate age into groups
+
+testage <- split(dt2, cut(dt2$Age, c(0,20,40,60,80,100), include.lowest = TRUE))
+
+age0_20 <- testage[1]
+
+age21_40 <- testage[2]
+dftest <- data.frame(matrix(sapply(age21_40, c)))
+
+age41_60 <- testage[3]
+age61_80 <- testage[4]
+age81_100 <- testage[5]
+
+kstestage <- glm(class ~ ., data=age21_40, family = "binomial")
+
 ##### Summary Stats #####
 stargazer(dt2, type="text")
 stat.desc(dt2)
