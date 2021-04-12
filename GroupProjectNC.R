@@ -40,23 +40,10 @@ colnames(dt2)[1] <- "Age"
 
 dt2 <- na.omit(dt2)
 
-##### 10-Fold Cross Validation ####
-install.packages('e1071', dependencies=TRUE)
-require(e1071)
-
-dt2$class <- as.factor(dt2$class)
-train_control <- trainControl(method="cv", number=5, savePredictions = TRUE)
-modelk <- train(class ~ ., data = dt2, method = "rpart", trControl=train_control)
-
-modelk$pred
-
-print(modelk)
-plot(modelk)
-rpart.best <- modelk$finalModel
-rpart.best
-
-
-rpart.plot(rpart.best, extra = 101)
+##### Summary Stats #####
+stargazer(dt2, type="text")
+stat.desc(dt2)
+chart.Correlation(dt2)
 
 ##### Creating Age Buckets for Control ####
 
@@ -69,14 +56,8 @@ hist(dt2$Age,breaks=5) #5 age ranges
 #Separate age into groups
 
 dt2$Agebucket <- ifelse(dt2$Age <= 40, "U40", ifelse(dt2$Age <= 60, "40to60", "A60")) #convert to factor 
-
+dt2$Agebucket <- as.factor(dt2$Agebucket)
 table(dt2$Agebucket)
-
-##### Summary Stats #####
-stargazer(dt2, type="text")
-stat.desc(dt2)
-chart.Correlation(dt2)
-
 
 #####Shuffling data for training groups 80/20 ####
 shuffle_index <- sample(1:nrow(dt2))
@@ -165,10 +146,7 @@ mean(predicted.classes.lasso == observed.classes.lasso)
 fitd <- rpart(class ~ ., data=data_train, method = "class") 
 rpart.plot(fitd, extra = 101)
 
-#Now start looking into k-fold cross validation
-
-
-##### Prediction #####
+# Prediction
 
 predict_unseen <- predict(fitd, data_test, type = "class")
 
@@ -176,21 +154,25 @@ predict_unseen <- predict(fitd, data_test, type = "class")
 table_mat <- table(data_test$class, predict_unseen)
 table_mat
 
-##### Perfromance Measures #####
+# Perfromance Measures
 TP = table_mat[1,1]
 FN = table_mat[2,1]
 FP = table_mat[1,2]
 TN = table_mat[2,2]
 
-
 accuracy_test <- (TP+TN)/sum(table_mat)
 print(paste('Accuracy for test', accuracy_test))
 
-recall_test <- TP/(TP+FN)
-print(paste('Recall for test', recall_test))
+#k-Fold Cross Validation ####
+require(e1071)
 
-precision_test <- TP/(TP+FP) #performance
-print(paste('Precision for test', recall_test))
+dt2$class <- as.factor(dt2$class)
+train_control <- trainControl(method="cv", number=3, savePredictions = TRUE)
+modelk <- train(class ~ ., data = dt2, method = "rpart", trControl=train_control)
 
-f1_test <- precision_test*recall_test/(precision_test+recall_test)
-print(paste('F1 score is', recall_test))
+print(modelk)
+plot(modelk)
+rpart.best <- modelk$finalModel
+rpart.best
+
+rpart.plot(rpart.best, extra = 101)
