@@ -35,40 +35,45 @@ dt1 <- lapply(dt1, as.integer)
 dt1 <- data.frame(dt1)
 dt1 <- dt1 - 1
 
-dt2 <- cbind(dtage, dt1)
-colnames(dt2)[1] <- "Age"
+dt_main <- cbind(dtage, dt1)
+colnames(dt_main)[1] <- "Age"
 
-dt2 <- na.omit(dt2)
+dt_main <- na.omit(dt_main)
 
 ##### Summary Stats #####
-stargazer(dt2, type="text")
-stat.desc(dt2)
-chart.Correlation(dt2)
+stargazer(dt_main, type="text")
+stat.desc(dt_main)
+chart.Correlation(dt_main)
 
 ##### Creating Age Buckets for Control ####
 
 #Check the range of ages 
-range(dt$Age) #16-90
+range(dt_main$Age) #16-90
 
 #Visualize the Histogram
-hist(dt2$Age,breaks=5) #5 age ranges
+hist(dt_main$Age,
+     breaks=5,
+     main = "Histogram of Age Ranges",
+     xlab = "Age",
+     col = "grey",
+     border = "black") #5 age ranges
 
 #Separate age into groups
 
-dt2$Agebucket <- ifelse(dt2$Age <= 40, "U40", ifelse(dt2$Age <= 60, "40to60", "A60")) #convert to factor 
-dt2$Agebucket <- as.factor(dt2$Agebucket)
-table(dt2$Agebucket)
+dt_main$Agebucket <- ifelse(dt_main$Age <= 40, "U40", ifelse(dt_main$Age <= 60, "40to60", "A60")) #convert to factor 
+dt_main$Agebucket <- as.factor(dt_main$Agebucket)
+table(dt_main$Agebucket)
 
 #####Shuffling data for training groups 80/20 ####
-shuffle_index <- sample(1:nrow(dt2))
-dt2 <- dt2[shuffle_index, ]
-head(dt2)
+shuffle_index <- sample(1:nrow(dt_main))
+dt_main <- dt_main[shuffle_index, ]
+head(dt_main)
 
 #Create train/test data
 #80% train, bottom 20% test
-n_cut <- round(nrow(dt2)*0.8,0)
-data_train <- dt2[1:n_cut, ]
-data_test <- dt2[(n_cut+1):nrow(dt2), ]
+n_cut <- round(nrow(dt_main)*0.8,0)
+data_train <- dt_main[1:n_cut, ]
+data_test <- dt_main[(n_cut+1):nrow(dt_main), ]
 
 #check dim
 dim(data_train)
@@ -96,20 +101,9 @@ predicted.classes <- as.integer(predicted.classes)
 predicted.classes <- predicted.classes - 1
 
 # Model accuracy
-mean(predicted.classes == data_test$class)
+accuracy_logit <- mean(predicted.classes == data_test$class)
 
-table_logit <- table(data_test$class, predicted.classes)
-table_logit
-
-TP_l = table_logit[1,1]
-FN_l = table_logit[2,1]
-FP_l = table_logit[1,2]
-TN_l = table_logit[2,2]
-
-
-accuracy_test_logit <- (TP_l+TN_l)/sum(table_logit)
-print(paste('Accuracy for test', accuracy_test_logit))
-
+print(paste('Accuracy for test', accuracy_logit))
 
 #LASSO LOGIT Model ####
 
@@ -143,12 +137,15 @@ observed.classes.lasso <- data_test$class
 mean(predicted.classes.lasso == observed.classes.lasso)
 
 #CART Model ####
-fitd <- rpart(class ~ ., data=data_train, method = "class") 
-rpart.plot(fitd, extra = 101)
+
+#data_train[2:18] <- lapply(data_train[2:18], as.factor)
+
+cart.KS <- rpart(class ~ ., data=data_train, method = "class") 
+rpart.plot(cart.KS, extra = 101)
 
 # Prediction
 
-predict_unseen <- predict(fitd, data_test, type = "class")
+predict_unseen <- predict(cart.KS, data_test, type = "class")
 
 #Confusion Matrix
 table_mat <- table(data_test$class, predict_unseen)
@@ -166,9 +163,9 @@ print(paste('Accuracy for test', accuracy_test))
 #k-Fold Cross Validation ####
 require(e1071)
 
-dt2$class <- as.factor(dt2$class)
+dt_main$class <- as.factor(dt_main$class)
 train_control <- trainControl(method="cv", number=3, savePredictions = TRUE)
-modelk <- train(class ~ ., data = dt2, method = "rpart", trControl=train_control)
+modelk <- train(class ~ ., data = dt_main, method = "rpart", trControl=train_control)
 
 print(modelk)
 plot(modelk)
@@ -176,3 +173,4 @@ rpart.best <- modelk$finalModel
 rpart.best
 
 rpart.plot(rpart.best, extra = 101)
+
